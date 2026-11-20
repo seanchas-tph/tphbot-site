@@ -1,0 +1,284 @@
+<title>Freeze Reversi Support</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  /* Layout: a single reading column, with the rules table and level ladder
+     breaking out to full width. Color taken from the app's own icon --
+     steel blue plate, ivory and graphite counters. */
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --fg: #1A1D23;
+    --muted: #5A6472;
+    --rule: #DDDCD6;
+    --accent: #3E5873;
+    --accent-soft: #E7EDF4;
+    --ivory: #EFE9DC;
+    --graphite: #26272C;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181D;
+      --surface: #1D2129;
+      --fg: #E8E9EC;
+      --muted: #9AA4B2;
+      --rule: #2E3440;
+      --accent: #9DBBD8;
+      --accent-soft: #232C38;
+      --ivory: #E4DDCE;
+      --graphite: #0E0F13;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181D;
+    --surface: #1D2129;
+    --fg: #E8E9EC;
+    --muted: #9AA4B2;
+    --rule: #2E3440;
+    --accent: #9DBBD8;
+    --accent-soft: #232C38;
+    --ivory: #E4DDCE;
+    --graphite: #0E0F13;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 3rem 4rem;
+  }
+
+  header { display: flex; gap: 1.1rem; align-items: center; margin-bottom: 2.6rem; }
+  .mark { width: 60px; height: 60px; flex: none; }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.9rem, 5vw, 2.5rem);
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  .tagline { color: var(--muted); margin: 0.3rem 0 0; font-size: 0.97rem; }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    margin: 2.8rem 0 0.8rem;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.6rem 0 0.4rem; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+  .lede { font-size: 1.08rem; color: var(--muted); }
+
+  dl.variants { display: grid; gap: 0; margin: 1rem 0 0; }
+  dl.variants > div {
+    display: grid;
+    grid-template-columns: 11rem 1fr;
+    gap: 0 1.4rem;
+    padding: 0.85rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  dl.variants > div:last-child { border-bottom: 1px solid var(--rule); }
+  dl.variants dt { font-weight: 600; min-width: 0; }
+  dl.variants dd { margin: 0; color: var(--muted); min-width: 0; }
+  @media (max-width: 34rem) {
+    dl.variants > div { grid-template-columns: 1fr; gap: 0.15rem; }
+  }
+
+  .scroller { overflow-x: auto; margin: 1rem 0 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.94rem; }
+  th, td { text-align: left; padding: 0.55rem 0.9rem 0.55rem 0; border-bottom: 1px solid var(--rule); }
+  th { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  td.num { font-variant-numeric: tabular-nums; }
+
+  kbd {
+    font: inherit;
+    font-size: 0.86em;
+    background: var(--accent-soft);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.08em 0.4em;
+    white-space: nowrap;
+  }
+
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    margin: 1.4rem 0;
+  }
+  .note p:last-child { margin-bottom: 0; }
+
+  .todo {
+    background: #FFF3CD;
+    color: #5C4708;
+    border: 1px dashed #B8912A;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    margin: 1.2rem 0;
+    font-size: 0.93rem;
+  }
+  .todo strong { display: block; margin-bottom: 0.25rem; }
+
+  .contact { font-size: 1.05rem; font-weight: 500; user-select: all; }
+
+  footer {
+    margin-top: 3.4rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 0.88rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <svg class="mark" viewBox="0 0 120 120" aria-hidden="true">
+      <rect x="4" y="4" width="112" height="112" rx="26" fill="#4C6480"/>
+      <defs>
+        <clipPath id="disc"><circle cx="60" cy="60" r="31"/></clipPath>
+        <clipPath id="left"><rect x="0" y="0" width="60" height="120"/></clipPath>
+        <clipPath id="right"><rect x="60" y="0" width="60" height="120"/></clipPath>
+        <path id="flake" d="M60.00,60.00L60.00,36.00 M60.00,49.44L65.70,45.88 M60.00,49.44L54.30,45.88 M60.00,42.24L64.07,39.70 M60.00,42.24L55.93,39.70 M60.00,60.00L39.22,48.00 M50.85,54.72L50.62,48.00 M50.85,54.72L44.92,57.87 M44.62,51.12L44.45,46.32 M44.62,51.12L40.38,53.37 M60.00,60.00L39.22,72.00 M50.85,65.28L44.92,62.13 M50.85,65.28L50.62,72.00 M44.62,68.88L40.38,66.63 M44.62,68.88L44.45,73.68 M60.00,60.00L60.00,84.00 M60.00,70.56L54.30,74.12 M60.00,70.56L65.70,74.12 M60.00,77.76L55.93,80.30 M60.00,77.76L64.07,80.30 M60.00,60.00L80.78,72.00 M69.15,65.28L69.38,72.00 M69.15,65.28L75.08,62.13 M75.38,68.88L75.55,73.68 M75.38,68.88L79.62,66.63 M60.00,60.00L80.78,48.00 M69.15,54.72L75.08,57.87 M69.15,54.72L69.38,48.00 M75.38,51.12L79.62,53.37 M75.38,51.12L75.55,46.32"/>
+      </defs>
+      <g clip-path="url(#disc)">
+        <rect x="24" y="24" width="36" height="72" fill="#F2ECDE"/>
+        <rect x="60" y="24" width="36" height="72" fill="#16161A"/>
+      </g>
+      <g clip-path="url(#disc)" fill="none" stroke-width="2.3" stroke-linecap="round">
+        <g clip-path="url(#left)"><use href="#flake" stroke="#28303C"/></g>
+        <g clip-path="url(#right)"><use href="#flake" stroke="#CFE4F2"/></g>
+      </g>
+      <circle cx="60" cy="60" r="31" fill="none" stroke="#0B1119" stroke-opacity="0.45" stroke-width="2"/>
+    </svg>
+    <div>
+      <h1>Freeze Reversi</h1>
+      <p class="tagline">Support and help &middot; for macOS</p>
+    </div>
+  </header>
+
+  <p class="lede">Reversi, with one addition: each player holds two freeze discs that can lock
+  a counter's color for the rest of the game. This page explains how the game works and how
+  to get help.</p>
+
+  <h2>Getting help</h2>
+  <p>Questions, problems, or a bug to report — write to:</p>
+  <p class="contact">freeze.reversi@icloud.com</p>
+  <p>Please say which version of macOS you are running and which variant and level you were
+  playing. If the game behaved differently from what you expected, the move list matters more
+  than anything else, so describe the position if you can.</p>
+
+  <h2>The game</h2>
+  <p>Players take turns placing a disc of their color. A move is legal only if it traps
+  one or more of the opponent's discs in a straight line between the disc you place and
+  another of your own; every trapped disc turns over. If you have no legal move you pass.
+  When neither player can move, whoever has more discs wins.</p>
+
+  <h2>Freeze discs</h2>
+  <p>Each player starts with two freeze discs. Press <kbd>⌘F</kbd>, or click
+  <strong>Freeze This Move</strong>, before you place a disc. The disc you place next is
+  frozen: it wears a brass ring and its color is fixed for the rest of the game.</p>
+  <p>A frozen disc still behaves normally in every other respect. It can form the far end of
+  a line that captures, and discs between it and another of your discs still turn over.
+  It simply never turns over itself. One restriction follows from this: a move must still
+  turn over at least one disc that is <em>not</em> frozen, or it is not a legal move.</p>
+  <div class="note">
+    <p>A freeze disc is worth more held than spent. The computer prices an unspent token
+    highly and generally keeps its freezes into the middle game, looking for a square that
+    anchors a line it wants to keep. Spending both early is usually a mistake.</p>
+  </div>
+
+  <h2>Variants</h2>
+  <p>Choose one in <strong>Settings</strong> (<kbd>⌘,</kbd>) or from the <strong>Game</strong>
+  menu. Changing the variant starts a new game.</p>
+  <dl class="variants">
+    <div><dt>Standard</dt><dd>Reversi on the usual 8&times;8 board.</dd></div>
+    <div><dt>Freeze Discs</dt><dd>8&times;8, two freeze discs each.</dd></div>
+    <div><dt>6&times;6 Quick</dt><dd>A smaller board and a shorter game, about ten minutes.</dd></div>
+    <div><dt>Anti-Reversi</dt><dd>Fewest discs wins. Empty squares go to the winner. The computer plays this one casually rather than well.</dd></div>
+    <div><dt>6&times;6 with Freeze</dt><dd>The small board with freeze discs, where each frozen disc controls a larger share of the lines.</dd></div>
+  </dl>
+
+  <h2>Difficulty</h2>
+  <p>Five levels, set in <strong>Settings</strong> or from the <strong>Game</strong> menu.
+  Strength comes mainly from how many moves ahead the computer looks; the time limit only
+  caps how long you wait for it.</p>
+  <div class="scroller">
+    <table>
+      <thead>
+        <tr><th>Level</th><th>Looks ahead</th><th>Plays the ending perfectly</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1 &nbsp;Novice</td><td class="num">1 move</td><td>no</td></tr>
+        <tr><td>2 &nbsp;Casual</td><td class="num">3 moves</td><td>no</td></tr>
+        <tr><td>3 &nbsp;Club</td><td class="num">5 moves</td><td>last 10 squares</td></tr>
+        <tr><td>4 &nbsp;Expert</td><td class="num">7 moves</td><td>last 12 squares</td></tr>
+        <tr><td>5 &nbsp;Maximum</td><td class="num">9 moves</td><td>last 14 squares</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The 6&times;6 board uses its own, shallower ladder, because a move reaches proportionally
+  further on a smaller board. Settings shows the figures for whichever variant is selected.</p>
+
+  <h2>Keyboard</h2>
+  <div class="scroller">
+    <table>
+      <tbody>
+        <tr><td><kbd>⌘N</kbd></td><td>New game</td></tr>
+        <tr><td><kbd>⌘Z</kbd></td><td>Take back your last move</td></tr>
+        <tr><td><kbd>⌘F</kbd></td><td>Freeze the disc you play next</td></tr>
+        <tr><td><kbd>⌘.</kbd></td><td>Make the computer move now, without waiting</td></tr>
+        <tr><td><kbd>⌘,</kbd></td><td>Settings</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Questions that come up</h2>
+
+  <h3>The computer is taking too long.</h3>
+  <p>Lower the time limit in Settings, or press <kbd>⌘.</kbd> to make it play its best move
+  so far. The computer always has a sound move ready, so interrupting it never produces a
+  bad one — only a slightly less considered one.</p>
+
+  <h3>Can I play another person?</h3>
+  <p>Yes, on the same Mac. Set <strong>Opponent</strong> to <strong>Two Players</strong>
+  in Settings.</p>
+
+  <h3>Why can't I play on that square?</h3>
+  <p>A move must turn over at least one disc. In the freeze variants it must turn over at
+  least one disc that is not frozen. If the dots marking legal moves are hidden, turn
+  <strong>Show my legal moves</strong> back on in Settings.</p>
+
+  <h3>My game was still there when I reopened the app.</h3>
+  <p>That is deliberate. The game in progress is saved when you quit and restored when you
+  return. <kbd>⌘N</kbd> starts a fresh one.</p>
+
+  <h3>Does the game collect anything about me?</h3>
+  <p>No. See the <a href="privacy.html">privacy policy</a>.</p>
+
+  <footer>
+    <span>Freeze Reversi for macOS</span>
+    <a href="privacy.html">Privacy policy</a>
+  </footer>
+</div>
